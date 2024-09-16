@@ -1,0 +1,40 @@
+# Ignoriraj virtualno okruženje
+venv/
+.env
+
+# Ignoriraj Python cache datoteke
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Ignoriraj logove i debug datoteke
+*.log
+*.sqlite3
+*.db
+
+# Ignoriraj IDE specifične datoteke (npr. VSCode, PyCharm)
+.vscode/
+.idea/
+
+# Ignoriraj pytest cache datoteke
+.pytest_cache/
+
+# Ignoriraj Jupyter Notebook checkpointove
+.ipynb_checkpoints/
+
+# Ignoriraj mypy type check datoteke
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Ignoriraj coverage reportove
+htmlcov/
+.coverage
+.coverage.*
+
+# Ignoriraj build direktorije
+build/
+dist/
+*.egg-info/
+Objašnjenje š
