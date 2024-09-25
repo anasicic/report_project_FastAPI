@@ -4,9 +4,11 @@ from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException, Path
 from starlette import status
 from models import User
+from .auth import UserResponse
 from database import SessionLocal
 from .auth import get_current_user
 from passlib.context import CryptContext
+from typing import List
 
 router = APIRouter(
     prefix='/user',
@@ -32,9 +34,16 @@ class UserVerification(BaseModel):
 
 
 
-@router.get("/")
-async def get_user(db: db_dependency, current_user: user_dependency):
-    return db.query(User).all()
+@router.get("/user", response_model=List[UserResponse])
+async def get_user(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
+    if current_user['user_role'] == 'admin':
+        users = db.query(User).all() 
+        return [UserResponse.model_validate(user) for user in users]  
+
+    user = db.query(User).filter(User.id == current_user['id']).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Korisnik nije pronađen")
+    return UserResponse.model_validate(user)
 
 
 @router.put("/change-password", status_code=status.HTTP_204_NO_CONTENT)
