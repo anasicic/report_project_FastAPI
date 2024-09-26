@@ -45,19 +45,18 @@ async def read_me(current_user: UserResponse = Depends(get_current_user)):
 async def change_password(
     user_verification: UserVerification, 
     db: Session = Depends(database.get_db), 
-    current_user: models.User = Depends(get_current_user)  # Koristite get_current_user
+    current_user: models.User = Depends(get_current_user)  
 ):
-    # Pronalazak korisnika u bazi na osnovu ID-a
     user = db.query(models.User).filter(models.User.id == current_user.id).first()
     
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    # Proverite trenutnu lozinku
+    
     if not bcrypt_context.verify(user_verification.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Incorrect password")
 
-    # Ažurirajte lozinku
+    
     user.hashed_password = bcrypt_context.hash(user_verification.new_password)
     db.commit()
 
