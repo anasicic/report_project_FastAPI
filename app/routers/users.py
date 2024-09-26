@@ -8,7 +8,12 @@ from .auth import UserResponse
 from database import SessionLocal
 from .auth import get_current_user
 from passlib.context import CryptContext
-from typing import List
+from typing import Optional
+from .auth import get_db
+import models, database
+from routers import auth, invoices, admin, users
+
+
 
 router = APIRouter(
     prefix='/user',
@@ -32,34 +37,30 @@ class UserVerification(BaseModel):
     password: str
     new_password: str = Field(min_length=6)
 
-
-
-@router.get("/user", response_model=List[UserResponse])
-async def get_user(db: Session = Depends(get_db), current_user: dict = Depends(get_current_user)):
-    if current_user['user_role'] == 'admin':
-        users = db.query(User).all() 
-        return [UserResponse.model_validate(user) for user in users]  
-
-    user = db.query(User).filter(User.id == current_user['id']).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="Korisnik nije pronađen")
-    return UserResponse.model_validate(user)
-
+@router.get("/current_user", response_model=UserResponse)
+async def read_me(current_user: UserResponse = Depends(get_current_user)):
+    return current_user
 
 @router.put("/change-password", status_code=status.HTTP_204_NO_CONTENT)
-async def change_password(user_verification: UserVerification, 
-                          db: db_dependency, 
-                          current_user: user_dependency):
-    user = db.query(User).filter(User.id == current_user['id']).first()
-
+async def change_password(
+    user_verification: UserVerification, 
+    db: Session = Depends(database.get_db), 
+    current_user: models.User = Depends(get_current_user)  # Koristite get_current_user
+):
+    # Pronalazak korisnika u bazi na osnovu ID-a
+    user = db.query(models.User).filter(models.User.id == current_user.id).first()
+    
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
+    # Proverite trenutnu lozinku
     if not bcrypt_context.verify(user_verification.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Incorrect password")
 
+    # Ažurirajte lozinku
     user.hashed_password = bcrypt_context.hash(user_verification.new_password)
-    db.add(user)
     db.commit()
-    
-    return {"message": "Password changed successfully"}
+
+    return {"detail": "Password updated successfully"}
+
+
