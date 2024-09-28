@@ -86,10 +86,10 @@ async def get_current_user(token: str = Depends(oauth2_bearer), db: Session = De
             raise credentials_exception
 
         user = db.query(User).filter(User.id == user_id).first()
-        if user is None or not user.is_active:  # Provera da li je korisnik aktivan
+        if user is None or not user.is_active:  
             raise credentials_exception
 
-        return UserResponse(  # Vraćamo UserResponse umesto User
+        return UserResponse(  
             id=user.id,
             username=user.username,
             email=user.email,

@@ -78,7 +78,7 @@ async def read_all(db: db_dependency, user: dict = Depends(get_current_user)):
     if user is None:
         raise HTTPException(status_code=401, detail='Authentication Failed')
     
-    return db.query(Invoice).filter(Invoice.user_id == user.get('id')).all()
+    return db.query(Invoice).filter(Invoice.user_id == user.id).all()
     
 
 @router.get("/invoices/{invoice_id}", status_code=status.HTTP_200_OK)
@@ -86,7 +86,7 @@ async def read_invoice(db: db_dependency, user: dict = Depends(get_current_user)
     if user is None:
         raise HTTPException(status_code=401, detail='Authentication Failed')
 
-    invoice_model = db.query(Invoice).filter(Invoice.id == invoice_id, Invoice.user_id == user.get('id')).first()
+    invoice_model = db.query(Invoice).filter(Invoice.id == invoice_id, Invoice.user_id == user.id).first()
     
     if invoice_model is not None:
         return invoice_model
@@ -105,7 +105,7 @@ async def create_invoice(invoice_request: InvoiceRequest,  user: dict = Depends(
         netto_amount=invoice_request.netto_amount,
         date=datetime.strptime(invoice_request.date, "%Y-%m-%d").date(),
         invoice_number=invoice_request.invoice_number,
-        user_id= user["id"]
+        user_id= user.id
     )
     
     db.add(new_invoice)
@@ -137,7 +137,7 @@ async def update_invoice(
         raise HTTPException(status_code=401, detail='Authentication Failed')
 
     
-    invoice_model = db.query(Invoice).filter(Invoice.id == invoice_id, Invoice.user_id == user.get('id')).first()
+    invoice_model = db.query(Invoice).filter(Invoice.id == invoice_id, Invoice.user_id == user.id).first()
     
     if invoice_model is None:
         raise HTTPException(status_code=404, detail='Invoice not found or not authorized to update.')
@@ -163,7 +163,7 @@ async def delete_invoice(
     if user is None:
         raise HTTPException(status_code=401, detail='Authentication Failed')
 
-    invoice_model = db.query(Invoice).filter(Invoice.id == invoice_id, Invoice.user_id == user.get('id')).first()
+    invoice_model = db.query(Invoice).filter(Invoice.id == invoice_id, Invoice.user_id == user.id).first()
     
     if invoice_model is None:
         raise HTTPException(status_code=404, detail='Invoice not found or not authorized to delete.')
