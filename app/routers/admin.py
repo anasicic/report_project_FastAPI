@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException, Path
 from starlette import status
-from models import Invoice, TypeOfCost, CostCenter, User
+from models import Invoice, TypeOfCost, CostCenter, User, Supplier
 from database import SessionLocal
 from .auth import get_current_user, UserResponse, CreateUserRequest
 from database import get_db
@@ -24,6 +24,18 @@ class UpdateUserRequest(BaseModel):
     first_name: Optional[str] = Field(default=None, description="First name of the user, can be updated if needed")
     last_name: Optional[str] = Field(default=None, description="Last name of the user, can be updated if needed")
     role: Optional[str] = Field(default=None, description="Role of the user, can be updated if needed")
+
+class TypeOfCostCreate(BaseModel):
+    cost_code: int = Field(..., gt=0, description="Cost code must be a positive integer")
+    cost_name: str = Field(..., min_length=1, max_length=40, description="Cost name must be between 1 and 40 characters long")
+
+class CostCenterCreate(BaseModel):
+    cost_center_code: int = Field(..., gt=0, description="Cost center code must be a positive integer")
+    cost_center_name: str = Field(..., min_length=1, max_length=40, description="Cost center name must be between 1 and 40 characters long")
+
+class SupplierCreate(BaseModel):
+    supplier_name: str = Field(..., min_length=1, max_length=40, description="Supplier name must be between 1 and 40 characters long")
+
 
 
 def get_db():
@@ -238,6 +250,65 @@ async def delete_invoice(
     db.commit()
     
     return {"detail": "Invoice deleted successfully."}
+
+@router.post("/type_of_cost/", response_model=TypeOfCostCreate, status_code=status.HTTP_201_CREATED)
+async def create_type_of_cost(
+    type_of_cost: TypeOfCostCreate, 
+    db: db_dependency,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Only admins can create type of cost.")
+    
+    new_type_of_cost = TypeOfCost(
+        cost_code=type_of_cost.cost_code,
+        cost_name=type_of_cost.cost_name
+    )
+    db.add(new_type_of_cost)
+    db.commit()
+    db.refresh(new_type_of_cost)
+    
+    return new_type_of_cost
+
+
+@router.post("/cost_center/", response_model=CostCenterCreate, status_code=status.HTTP_201_CREATED)
+async def create_cost_center(
+    cost_center: CostCenterCreate, 
+    db: db_dependency,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Only admins can create cost centers.")
+    
+    new_cost_center = CostCenter(
+        cost_center_code=cost_center.cost_center_code,
+        cost_center_name=cost_center.cost_center_name
+    )
+    db.add(new_cost_center)
+    db.commit()
+    db.refresh(new_cost_center)
+    
+    return new_cost_center
+
+@router.post("/supplier/", response_model=SupplierCreate, status_code=status.HTTP_201_CREATED)
+async def create_supplier(
+    supplier: SupplierCreate, 
+    db: db_dependency,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Only admins can create suppliers.")
+    
+    new_supplier = Supplier(
+        supplier_name=supplier.supplier_name
+    )
+    db.add(new_supplier)
+    db.commit()
+    db.refresh(new_supplier)
+    
+    return new_supplier
+
+
 
 @router.get("/report", status_code=status.HTTP_200_OK)
 async def generate_report(
