@@ -76,6 +76,27 @@ async def get_all_users(db: db_dependency, current_user: UserResponse = Depends(
         is_active=user.is_active
     ) for user in users]
 
+@router.get("/users/{user_id}", response_model=UserResponse)
+async def get_user_by_id(user_id: int, db: db_dependency, current_user: UserResponse = Depends(get_current_user)):
+ 
+    if current_user.role != 'admin' and current_user.id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    return UserResponse(
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        role=user.role,
+        is_active=user.is_active
+    )
+
 
 @router.post("/create-user")
 async def create_user_for_admin(create_user_request: CreateUserRequest, 
