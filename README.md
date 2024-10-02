@@ -81,9 +81,9 @@ Aplikacija se sastoji od nekoliko modula unutar direktorija `app`, uključujući
 
 - **auth.py**: Ovaj modul upravlja autentifikacijom korisnika. Uključuje funkcionalnosti za prijavu, registraciju i odjavu korisnika. Pruža i zaštitu ruta kako bi se osiguralo da samo prijavljeni korisnici imaju pristup određenim dijelovima aplikacije.
 
-- **admin.py**: Modul za administrativne funkcije. Ovdje se nalaze endpointi koji omogućuju administratorima dodavanje, brisanje ili uređivanje korisnika, dobavljača, vrsta troškova i izvješća. Također može sadržavati logiku za generiranje izvještaja o troškovima.
+- **admin.py**: Modul za administrativne funkcije. Ovdje se nalaze endpointi koji omogućuju administratorima dodavanje, brisanje ili uređivanje korisnika, dobavljača, vrsta troškova, mjesta troškova te kreiranje izvještaja o ukupnim troškovima po mjestima troška.
 
-- **invoices.py**: Ovaj modul upravlja svim funkcijama vezanim uz ulazne račune. Uključuje mogućnosti za unos, ažuriranje, brisanje i pregled računa. Također može sadržavati logiku za povezivanje računa s drugim modelima (npr. korisnicima i dobavljačima).
+- **invoices.py**: Ovaj modul upravlja svim funkcijama vezanim uz ulazne račune. Uključuje mogućnosti za unos, ažuriranje, brisanje i pregled računa.
 
 - **users.py**: Modul koji upravlja korisničkim podacima. Ovdje se nalaze funkcionalnosti za dobivanje informacija o korisnicima, njihovo ažuriranje i upravljanje korisničkim profilima.
 
@@ -93,7 +93,7 @@ Aplikacija se sastoji od nekoliko modula unutar direktorija `app`, uključujući
 ## Funkcionalnosti
 
 - **Korisnička autentifikacija**: Prijava, registracija, odjava.
-- **Administratorske funkcije**: Dodavanje i brisanje korisnika, generiranje izvještaja.
+- **Administratorske funkcije**: Dodavanje i brisanje korisnika, dobavljača, vrste troškova, mjesta troškova, generiranje izvještaja.
 - **Upravljanje ulaznim računima**: Unos, ažuriranje i brisanje računa.
 - **Vizualizacija podataka**: Izvještaj o troškovima s grafičkim prikazima i opcijom izvoza u Excel.
 
@@ -101,6 +101,6 @@ Aplikacija se sastoji od nekoliko modula unutar direktorija `app`, uključujući
 
 ## Tehnologije
 
-- **FastAPI** - Web framework za backend.
-- **SQLite** - Baza podataka.
+- **FastAPI** - Web framework za backend
+- **SQLite** - Baza podataka
 
