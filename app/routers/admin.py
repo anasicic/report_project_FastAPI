@@ -291,6 +291,28 @@ async def create_type_of_cost(
     
     return new_type_of_cost
 
+@router.delete("/type_of_cost/{cost_type_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_type_of_cost(
+    cost_type_id: int,
+    db: db_dependency,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    if db.query(Invoice).filter(Invoice.cost_code_id == cost_type_id).count() > 0:
+        raise HTTPException(status_code=400, detail="Cannot delete cost type associated with active invoices")
+    
+    type_of_cost = db.query(TypeOfCost).filter(TypeOfCost.id == cost_type_id).first()
+    
+    if type_of_cost:
+        db.delete(type_of_cost)
+        db.commit()
+    else:
+        raise HTTPException(status_code=404, detail="Cost type not found")
+    
+    return {"detail": "Cost type deleted successfully."}
+
 
 @router.post("/cost_center/", response_model=CostCenterCreate, status_code=status.HTTP_201_CREATED)
 async def create_cost_center(
@@ -311,6 +333,30 @@ async def create_cost_center(
     
     return new_cost_center
 
+
+@router.delete("/cost_center/{cost_center_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_cost_center(
+    cost_center_id: int,
+    db: db_dependency,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    if db.query(Invoice).filter(Invoice.cost_center_id == cost_center_id).count() > 0:
+        raise HTTPException(status_code=400, detail="Cannot delete cost center associated with active invoices")
+    
+    cost_center = db.query(CostCenter).filter(CostCenter.id == cost_center_id).first()
+    
+    if cost_center:
+        db.delete(cost_center)
+        db.commit()
+    else:
+        raise HTTPException(status_code=404, detail="Cost center not found")
+    
+    return {"detail": "Cost center deleted successfully."}
+
+
 @router.post("/supplier/", response_model=SupplierCreate, status_code=status.HTTP_201_CREATED)
 async def create_supplier(
     supplier: SupplierCreate, 
@@ -328,6 +374,29 @@ async def create_supplier(
     db.refresh(new_supplier)
     
     return new_supplier
+
+
+@router.delete("/supplier/{supplier_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_supplier(
+    supplier_id: int,
+    db: db_dependency,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    if db.query(Invoice).filter(Invoice.supplier_id == supplier_id).count() > 0:
+        raise HTTPException(status_code=400, detail="Cannot delete supplier associated with active invoices")
+    
+    supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+    
+    if supplier:
+        db.delete(supplier)
+        db.commit()
+    else:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    return {"detail": "Supplier deleted successfully."}
 
 
 
