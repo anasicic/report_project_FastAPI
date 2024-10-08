@@ -73,7 +73,7 @@ class InvoiceResponse(BaseModel):
 
 
 
-@router.get("/", status_code=status.HTTP_200_OK)
+@router.get("/invoices", status_code=status.HTTP_200_OK)
 async def read_all(db: db_dependency, user: dict = Depends(get_current_user)):
     if user is None:
         raise HTTPException(status_code=401, detail='Authentication Failed')
