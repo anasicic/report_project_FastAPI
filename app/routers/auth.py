@@ -16,9 +16,12 @@ router = APIRouter(
     tags=['auth']
 )
 
-# Tajni ključ bi trebao biti spremljen u varijablama okoline
 SECRET_KEY = os.getenv('SECRET_KEY', 'default_secret_key')
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY environment variable not set!")
+
 ALGORITHM = 'HS256'
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/token')
@@ -62,7 +65,8 @@ def get_user_by_username(username: str, db: Session):
 
 def authenticate_user(username: str, password: str, db: Session):
     user = get_user_by_username(username, db)
-    if user and bcrypt_context.verify(password, user.hashed_password):
+    if user and user.is_active and bcrypt_context.verify(password, user.hashed_password):
+        print(f"Authenticated user: {user.username}, Role: {user.role}")
         return user
     return None
 
@@ -147,9 +151,17 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail='Invalid credentials')
-    token = create_access_token(user.username, user.id, user.role, timedelta(minutes=20))
+    token = create_access_token(user.username, user.id, user.role, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
 
-    return {'access_token': token, 'token_type': 'bearer'}
+    response = {
+        'access_token': token, 
+        'token_type': 'bearer',
+        'username': user.username,
+        'role': user.role
+    }
 
+    print("Response data:", response) 
+    
+    return response
 
 
