@@ -16,6 +16,11 @@ router = APIRouter(
     tags=['auth']
 )
 
+# Pomoćni model za API request
+class UserActivationRequest(BaseModel):
+    is_active: bool
+
+
 SECRET_KEY = os.getenv('SECRET_KEY', 'default_secret_key')
 if not SECRET_KEY:
     raise ValueError("SECRET_KEY environment variable not set!")
@@ -85,6 +90,7 @@ async def get_current_user(token: str = Depends(oauth2_bearer), db: Session = De
     
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        print("Decoded payload:", payload)
         user_id: int = payload.get("id")
         if user_id is None:
             raise credentials_exception
@@ -163,5 +169,29 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
     print("Response data:", response) 
     
     return response
+
+# Endpoint za ažuriranje statusa korisnika (aktivacija/deaktivacija)
+@router.put("/users/{user_id}/activation", status_code=status.HTTP_200_OK)
+async def update_user_activation(
+    user_id: int,
+    activation_data: UserActivationRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)  # Provjeravamo autentifikaciju
+):
+    # Pretpostavljamo da samo admin može upravljati aktivacijom drugih korisnika
+    if current_user["role"] != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can activate/deactivate users.")
+    
+    # Dohvaćamo korisnika prema ID-u
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    
+    # Ažuriramo status korisnika
+    user.is_active = activation_data.is_active
+    db.commit()  
+    status_message = "activated" if activation_data.is_active else "deactivated"
+    return {"message": f"User {user.username} has been {status_message}."}
 
 
