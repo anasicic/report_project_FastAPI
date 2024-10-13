@@ -176,19 +176,19 @@ async def update_user_activation(
     user_id: int,
     activation_data: UserActivationRequest,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)  # Provjeravamo autentifikaciju
+    current_user: dict = Depends(get_current_user)  # Provjerava autentifikacije
 ):
-    # Pretpostavljamo da samo admin može upravljati aktivacijom drugih korisnika
+    #  Samo admin može upravljati aktivacijom drugih korisnika
     if current_user["role"] != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can activate/deactivate users.")
     
-    # Dohvaćamo korisnika prema ID-u
+    # Dohvat korisnika prema ID-u
     user = db.query(User).filter(User.id == user_id).first()
 
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
     
-    # Ažuriramo status korisnika
+    # Ažuriranje statusa korisnika
     user.is_active = activation_data.is_active
     db.commit()  
     status_message = "activated" if activation_data.is_active else "deactivated"

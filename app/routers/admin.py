@@ -399,6 +399,36 @@ async def delete_supplier(
     return {"detail": "Supplier deleted successfully."}
 
 
+@router.get("/suppliers", response_model=List[SupplierCreate], status_code=status.HTTP_200_OK)
+async def read_suppliers(
+    db: db_dependency,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    # Opcionalno, samo admin može dobiti sve dobavljače
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    suppliers = db.query(Supplier).all()
+    return suppliers
+
+@router.get("/supplier/{supplier_id}", response_model=SupplierCreate, status_code=status.HTTP_200_OK)
+async def read_supplier(
+    supplier_id: int,
+    db: db_dependency,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    # Opcionalno, samo admin može dobiti jednog dobavljača
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+    
+    if supplier is None:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    return supplier
+
+
 
 @router.get("/report", status_code=status.HTTP_200_OK)
 async def generate_report(
