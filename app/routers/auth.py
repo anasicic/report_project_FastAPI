@@ -10,6 +10,7 @@ from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from jose import jwt, JWTError
 import os
+from pydantic import EmailStr
 
 router = APIRouter(
     prefix='/auth',
@@ -33,7 +34,7 @@ oauth2_bearer = OAuth2PasswordBearer(tokenUrl='auth/token')
 
 class CreateUserRequest(BaseModel):
     username: str
-    email: str
+    email: EmailStr
     first_name: str
     last_name: str
     password: str
@@ -54,6 +55,7 @@ class UserResponse(BaseModel):
     is_active: bool
 
     class Config:
+        orm_mode = True
         from_attributes = True
         
 def get_db():
@@ -113,6 +115,7 @@ async def get_current_user(token: str = Depends(oauth2_bearer), db: Session = De
 
 @router.post("/create-user", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(create_user_request: CreateUserRequest, db: db_dependency):
+    # Proveri da li korisnik već postoji
     existing_user = db.query(User).filter(
         (User.username == create_user_request.username) |
         (User.email == create_user_request.email)
@@ -122,33 +125,38 @@ async def create_user(create_user_request: CreateUserRequest, db: db_dependency)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Username or email already registered.")
 
+    # Hashiraj lozinku
     hashed_password = bcrypt_context.hash(create_user_request.password)
+    
+    # Kreiraj novog korisnika
     new_user = User(
         username=create_user_request.username,
         email=create_user_request.email,
         first_name=create_user_request.first_name,
         last_name=create_user_request.last_name,
         hashed_password=hashed_password,
-        role=create_user_request.role
-        # is_active ostavljeno na zadanu vrijednost True
+        role=create_user_request.role,
+        is_active=True  # Aktiviraj novog korisnika
     )
 
     db.add(new_user)
+    
     try:
         db.commit()
         db.refresh(new_user)
-        return UserResponse(
-            id=new_user.id,
-            username=new_user.username,
-            email=new_user.email,
-            first_name=new_user.first_name,
-            last_name=new_user.last_name,
-            role=new_user.role,
-            is_active=new_user.is_active
-        )
+
+        # Generišite token nakon uspešne registracije
+        token = create_access_token(new_user.username, new_user.id, new_user.role, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+
+        # Uključi token u odgovor
+        return {
+            **UserResponse.from_orm(new_user).dict(),  # Vraćamo sve informacije o korisniku
+            "access_token": token,
+            "token_type": "bearer"
+        }
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An error occurred: {str(e)}")
+       
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
