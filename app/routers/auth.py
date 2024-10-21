@@ -115,7 +115,7 @@ async def get_current_user(token: str = Depends(oauth2_bearer), db: Session = De
 
 @router.post("/create-user", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(create_user_request: CreateUserRequest, db: db_dependency):
-    # Proveri da li korisnik već postoji
+    # Provjeri da li korisnik već postoji
     existing_user = db.query(User).filter(
         (User.username == create_user_request.username) |
         (User.email == create_user_request.email)
@@ -145,10 +145,10 @@ async def create_user(create_user_request: CreateUserRequest, db: db_dependency)
         db.commit()
         db.refresh(new_user)
 
-        # Generišite token nakon uspešne registracije
+        
         token = create_access_token(new_user.username, new_user.id, new_user.role, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
 
-        # Uključi token u odgovor
+       
         return {
             **UserResponse.from_orm(new_user).dict(),  # Vraćamo sve informacije o korisniku
             "access_token": token,
@@ -201,5 +201,3 @@ async def update_user_activation(
     db.commit()  
     status_message = "activated" if activation_data.is_active else "deactivated"
     return {"message": f"User {user.username} has been {status_message}."}
-
-

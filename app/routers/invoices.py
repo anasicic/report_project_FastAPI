@@ -11,7 +11,11 @@ from database import engine, SessionLocal
 from datetime import datetime
 
 
-router = APIRouter()
+router = APIRouter(
+    prefix='/invoices',
+    tags=['invoices']
+)
+
 
 def get_db():
     db = SessionLocal()
@@ -68,12 +72,12 @@ class InvoiceResponse(BaseModel):
     user_id: int
     
     class Config:
+        
         from_attributes = True
 
 
 
-
-@router.get("/invoices", status_code=status.HTTP_200_OK)
+@router.get("/", status_code=status.HTTP_200_OK)
 async def read_all(db: db_dependency, user: dict = Depends(get_current_user)):
     if user is None:
         raise HTTPException(status_code=401, detail='Authentication Failed')
@@ -81,7 +85,7 @@ async def read_all(db: db_dependency, user: dict = Depends(get_current_user)):
     return db.query(Invoice).filter(Invoice.user_id == user.id).all()
     
 
-@router.get("/invoices/{invoice_id}", status_code=status.HTTP_200_OK)
+@router.get("/{invoice_id}", status_code=status.HTTP_200_OK)
 async def read_invoice(db: db_dependency, user: dict = Depends(get_current_user), invoice_id: int = Path(gt=0)):
     if user is None:
         raise HTTPException(status_code=401, detail='Authentication Failed')
@@ -125,7 +129,7 @@ async def create_invoice(invoice_request: InvoiceRequest,  user: dict = Depends(
     )
 
 
-@router.put("/invoices/{invoice_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.put("/{invoice_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def update_invoice(
     invoice_request: InvoiceRequest,
     invoice_id: int = Path(..., gt=0),
@@ -154,7 +158,7 @@ async def update_invoice(
     db.commit()
 
 
-@router.delete("/invoices/{invoice_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{invoice_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_invoice(
     invoice_id: int = Path(..., gt=0),
     db: Session = Depends(get_db),
@@ -172,4 +176,3 @@ async def delete_invoice(
     db.delete(invoice_model)
     db.commit()
 
-    

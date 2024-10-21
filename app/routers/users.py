@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException
 from starlette import status
-from models import User, Supplier, Invoice
+from models import User, Supplier, Invoice, TypeOfCost, CostCenter  
 from .auth import UserResponse
 from database import SessionLocal
 from .auth import get_current_user
@@ -14,7 +14,7 @@ router = APIRouter(
     tags=['user']
 )
 
-# DB session generator
+
 def get_db():
     db = SessionLocal()
     try:
@@ -22,12 +22,12 @@ def get_db():
     finally:
         db.close()
 
-# Dependencies
+
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
-# Pydantic model for user password verification
+
 class UserVerification(BaseModel):
     password: str
     new_password: str = Field(min_length=6)
@@ -38,8 +38,23 @@ class SupplierBase(BaseModel):
     supplier_name: str
 
     class Config:
-        orm_mode = True  # This allows the Pydantic model to work with SQLAlchemy models
+        orm_mode = True   # Enable ORM mode for this model
 
+
+class TypeOfCostBase(BaseModel):
+    id: int
+    cost_name: str
+
+    class Config:
+        orm_mode = True
+
+
+class CostCenterBase(BaseModel):
+    id: int
+    cost_center_name: str
+
+    class Config:
+        orm_mode = True
 
 @router.get("/current_user", response_model=UserResponse)
 async def read_me(current_user: UserResponse = Depends(get_current_user)):
@@ -64,11 +79,24 @@ async def change_password(
 
     return {"detail": "Password updated successfully"}
 
-@router.get("/suppliers", response_model=List[SupplierBase])  # Use SupplierBase for response model
+@router.get("/suppliers", response_model=List[SupplierBase])  
 async def read_suppliers(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_user)
 ):
-    # Return all suppliers
     suppliers = db.query(Supplier).all()
     return suppliers
+
+@router.get("/cost-centers", response_model=List[CostCenterBase])  
+async def get_cost_centers(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    return db.query(CostCenter).all()
+
+@router.get("/type-of-costs", response_model=List[TypeOfCostBase])  
+async def get_type_of_costs(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    return db.query(TypeOfCost).all()
