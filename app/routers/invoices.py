@@ -1,5 +1,5 @@
 from fastapi import Path, HTTPException, Depends, APIRouter
-from typing import Annotated
+from typing import Annotated, List
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 from starlette import status
@@ -9,6 +9,7 @@ from .auth import get_current_user
 from datetime import date
 from database import engine, SessionLocal
 from datetime import datetime
+from .auth import UserResponse
 
 
 router = APIRouter(
@@ -75,6 +76,29 @@ class InvoiceResponse(BaseModel):
         
         from_attributes = True
 
+# Pydantic model for Supplier
+class SupplierBase(BaseModel):
+    id: int
+    supplier_name: str
+
+    class Config:
+        orm_mode = True   
+
+
+class TypeOfCostBase(BaseModel):
+    id: int
+    cost_name: str
+
+    class Config:
+        orm_mode = True
+
+
+class CostCenterBase(BaseModel):
+    id: int
+    cost_center_name: str
+
+    class Config:
+        orm_mode = True
 
 
 @router.get("/", status_code=status.HTTP_200_OK)
@@ -176,3 +200,65 @@ async def delete_invoice(
     db.delete(invoice_model)
     db.commit()
 
+@router.get("/suppliers", response_model=List[SupplierBase])  
+async def read_suppliers(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    suppliers = db.query(Supplier).all()
+    return suppliers
+
+@router.get("/cost-centers", response_model=List[CostCenterBase])  
+async def get_cost_centers(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    return db.query(CostCenter).all()
+
+@router.get("/type-of-costs", response_model=List[TypeOfCostBase])  
+async def get_type_of_costs(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    return db.query(TypeOfCost).all()
+
+@router.get("/supplier/{supplier_id}", response_model=SupplierBase, status_code=status.HTTP_200_OK)
+async def get_supplier(
+    supplier_id: int = Path(..., gt=0),
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+    
+    if supplier is None:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    return supplier
+
+
+@router.get("/cost-center/{cost_center_id}", response_model=CostCenterBase, status_code=status.HTTP_200_OK)
+async def get_cost_center(
+    cost_center_id: int = Path(..., gt=0),
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    cost_center = db.query(CostCenter).filter(CostCenter.id == cost_center_id).first()
+    
+    if cost_center is None:
+        raise HTTPException(status_code=404, detail="Cost Center not found")
+    
+    return cost_center
+
+
+@router.get("/type-of-cost/{type_of_cost_id}", response_model=TypeOfCostBase, status_code=status.HTTP_200_OK)
+async def get_type_of_cost(
+    type_of_cost_id: int = Path(..., gt=0),
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    type_of_cost = db.query(TypeOfCost).filter(TypeOfCost.id == type_of_cost_id).first()
+    
+    if type_of_cost is None:
+        raise HTTPException(status_code=404, detail="Type of Cost not found")
+    
+    return type_of_cost
