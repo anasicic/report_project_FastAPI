@@ -39,6 +39,8 @@ class InvoiceRequest(BaseModel):
     date: str = Field(..., description="Date of the invoice in YYYY-MM-DD format")
     invoice_number: str = Field(..., description="Invoice number must be between 1 and 20 characters long")
 
+    
+
     @field_validator('date')
     def validate_date(cls, value):
         try:
@@ -106,20 +108,36 @@ async def read_all(db: db_dependency, user: dict = Depends(get_current_user)):
     if user is None:
         raise HTTPException(status_code=401, detail='Authentication Failed')
     
-    return db.query(Invoice).filter(Invoice.user_id == user.id).all()
+    if user.role == 'admin':
+        # Ako je korisnik admin, vrati sve račune
+        return db.query(Invoice).all()
+    else:
+        # Ako korisnik nije admin, vrati samo njegove račune
+        return db.query(Invoice).filter(Invoice.user_id == user.id).all()
     
 
 @router.get("/{invoice_id}", status_code=status.HTTP_200_OK)
-async def read_invoice(db: db_dependency, user: dict = Depends(get_current_user), invoice_id: int = Path(gt=0)):
-    if user is None:
-        raise HTTPException(status_code=401, detail='Authentication Failed')
-
-    invoice_model = db.query(Invoice).filter(Invoice.id == invoice_id, Invoice.user_id == user.id).first()
+async def read_invoice(
+    invoice_id: int = Path(gt=0),
+    db: Session = Depends(get_db),
+    user: UserResponse = Depends(get_current_user)
+):
     
-    if invoice_model is not None:
-        return invoice_model
+    if user is None:
+        raise HTTPException(status_code=401, detail="Authentication failed")
 
-    raise HTTPException(status_code=404, detail='Invoice not found.')
+    
+    invoice_model = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+
+    if invoice_model is None:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    if user.role != "admin" and invoice_model.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Forbidden: You do not have permission to access this invoice.")
+
+    
+    return invoice_model
+
 
 
 
@@ -186,21 +204,27 @@ async def update_invoice(
 async def delete_invoice(
     invoice_id: int = Path(..., gt=0),
     db: Session = Depends(get_db),
-    user: dict = Depends(get_current_user) 
+    user: dict = Depends(get_current_user)
 ):
     if user is None:
         raise HTTPException(status_code=401, detail='Authentication Failed')
 
-    invoice_model = db.query(Invoice).filter(Invoice.id == invoice_id, Invoice.user_id == user.id).first()
+    invoice_model = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     
     if invoice_model is None:
         raise HTTPException(status_code=404, detail='Invoice not found or not authorized to delete.')
+    
+    if user.role != "admin" and invoice_model.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Forbidden: You do not have permission to delete this invoice.")
 
 
     db.delete(invoice_model)
     db.commit()
 
-@router.get("/suppliers", response_model=List[SupplierBase])  
+
+    return {"detail": "Invoice deleted successfully"}
+
+@router.get("/data/suppliers", response_model=List[SupplierBase])  
 async def read_suppliers(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_user)
@@ -208,14 +232,14 @@ async def read_suppliers(
     suppliers = db.query(Supplier).all()
     return suppliers
 
-@router.get("/cost-centers", response_model=List[CostCenterBase])  
+@router.get("/data/cost-centers", response_model=List[CostCenterBase])  
 async def get_cost_centers(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_user)
 ):
     return db.query(CostCenter).all()
 
-@router.get("/type-of-costs", response_model=List[TypeOfCostBase])  
+@router.get("/data/type-of-costs", response_model=List[TypeOfCostBase])  
 async def get_type_of_costs(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_user)

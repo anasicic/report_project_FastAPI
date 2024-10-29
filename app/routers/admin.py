@@ -25,6 +25,18 @@ class UpdateUserRequest(BaseModel):
     last_name: Optional[str] = Field(default=None, description="Last name of the user, can be updated if needed")
     role: Optional[str] = Field(default=None, description="Role of the user, can be updated if needed")
 
+class UpdateUserResponse(BaseModel):
+    username: str
+    email: str
+    first_name: str
+    last_name: str
+    role: str
+
+    class Config:  
+        from_attributes = True 
+
+    
+
 class TypeOfCostCreate(BaseModel):
     cost_code: int = Field(..., gt=0, description="Cost code must be a positive integer")
     cost_name: str = Field(..., min_length=1, max_length=40, description="Cost name must be between 1 and 40 characters long")
@@ -173,6 +185,7 @@ async def update_user(
         role=user.role,
         is_active=user.is_active
     )
+
 
 @router.delete("/users/{user_id}", status_code=204)
 async def delete_user(

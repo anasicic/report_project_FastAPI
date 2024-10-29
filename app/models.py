@@ -3,6 +3,8 @@ from sqlalchemy import Column, Integer, Float, String, Date, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
+
+
 Base = declarative_base()
 
 class TypeOfCost(Base):
@@ -70,3 +72,5 @@ class Invoice(Base):
     cost_center = relationship("CostCenter", back_populates="invoices")
     supplier = relationship("Supplier", back_populates="invoices")
     user = relationship("User", back_populates="invoices")
+
+   

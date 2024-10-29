@@ -79,24 +79,3 @@ async def change_password(
 
     return {"detail": "Password updated successfully"}
 
-@router.get("/suppliers", response_model=List[SupplierBase])  
-async def read_suppliers(
-    db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(get_current_user)
-):
-    suppliers = db.query(Supplier).all()
-    return suppliers
-
-@router.get("/cost-centers", response_model=List[CostCenterBase])  
-async def get_cost_centers(
-    db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(get_current_user)
-):
-    return db.query(CostCenter).all()
-
-@router.get("/type-of-costs", response_model=List[TypeOfCostBase])  
-async def get_type_of_costs(
-    db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(get_current_user)
-):
-    return db.query(TypeOfCost).all()
