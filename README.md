@@ -107,7 +107,7 @@ FastAPI uses SQLAlchemy to manage the database. To set up the database, follow t
 
 - **User Authentication**: Login, registration, and logout.
 - **Administrative Functions**: Adding and deleting users, suppliers, types of expenses, cost centers, and generating reports.
-- **Invoice Management**: Inputting, updating, and deleting invoices.
+- **Invoice Management**: Adding, updating, and deleting invoices.
 - **Data Visualization**: Expense reports with graphical representations and export options to Excel.
 
 ---
