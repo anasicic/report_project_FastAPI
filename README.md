@@ -1,72 +1,72 @@
 # report_project_FastAPI
 
-**report_project_FastAPI** je web aplikacija temeljena na MVC (Model-View-Controller) arhitekturi, izrađena u FastAPI. Aplikacija omogućava unos ulaznih računa i izvještavanje o ukupnim troškovima po mjestima troška.
+**report_project_FastAPI** is a web application based on the MVC (Model-View-Controller) architecture, developed in FastAPI. The application allows for the input of invoices and reporting on total expenses by cost centers.
 
-## Sadržaj
+## Contents
 
-- [Pokretanje servera](#pokretanje-servera)
-- [Struktura aplikacije](#struktura-aplikacije)
-- [Funkcionalnosti](#funkcionalnosti)
-- [Tehnologije](#tehnologije)
+- [Running the Server](#running-the-server)
+- [Application Structure](#application-structure)
+- [Database Setup](#database-setup)
+- [Features](#features)
+- [Technologies](#technologies)
 
 ---
 
-## Pokretanje servera
+## Running the Server
 
-Kako biste pokrenuli projekt lokalno, pratite sljedeće korake:
+To run the project locally, follow these steps:
 
-1. **Klonirajte repozitorij**:
+1. **Clone the Repository**:
 
-    Ako preuzimate projekt s GitHub-a, klonirajte repozitorij koristeći `git clone`:
+    If you are downloading the project from GitHub, clone the repository using `git clone`:
 
     ```bash
     git clone https://github.com/anasicic/report_project_FastAPI.git
     ```
 
+2. **Navigate to the Project Directory**:
 
-2. **Idite u direktorij projekta**:
-
-    Nakon što je projekt kloniran, uđite u direktorij projekta:
+    After cloning the project, navigate to the project directory:
 
     ```bash
     cd app
     ```
 
-3. **Stvorite virtualno okruženje**:
+3. **Create a Virtual Environment**:
 
-    Preporučuje se koristiti virtualno okruženje za instalaciju paketa:
+    It is recommended to use a virtual environment for package installation:
 
     ```bash
     python -m venv venv
     ```
 
-4. **Aktivirajte virtualno okruženje**:
+4. **Activate the Virtual Environment**:
 
-    Na Windows sustavima:
+    On Windows systems:
 
     ```bash
     venv\Scripts\activate
     ```
 
-    Na Linux ili macOS sustavima:
+    On Linux or macOS systems:
 
     ```bash
     source venv/bin/activate
     ```
 
-5. **Instalirajte potrebne pakete**:
+5. **Install Required Packages**:
 
     ```bash
     pip install -r requirements.txt
     ```
 
-6. **Pokrenite razvojni server**:
+6. **Run the Development Server**:
 
     ```bash
     uvicorn main:app --reload
     ```
 
-7. **Otvorite preglednik i idite na**:
+7. **Open a Browser and Go To**:
 
     ```url
     http://127.0.0.1:8000/
@@ -74,33 +74,45 @@ Kako biste pokrenuli projekt lokalno, pratite sljedeće korake:
 
 ---
 
-## Struktura aplikacije
+## Application Structure
 
+The application consists of several modules within the `app` directory, including:
 
-Aplikacija se sastoji od nekoliko modula unutar direktorija `app`, uključujući:
+- **auth.py**: This module handles user authentication. It includes functionalities for login, registration, and logout of users. It also provides route protection to ensure that only logged-in users can access certain parts of the application.
 
-- **auth.py**: Ovaj modul upravlja autentifikacijom korisnika. Uključuje funkcionalnosti za prijavu, registraciju i odjavu korisnika. Pruža i zaštitu ruta kako bi se osiguralo da samo prijavljeni korisnici imaju pristup određenim dijelovima aplikacije.
+- **admin.py**: A module for administrative functions. Here you will find endpoints that allow administrators to add, delete, or edit users, suppliers, types of expenses, cost centers, and generate reports on total expenses by cost center.
 
-- **admin.py**: Modul za administrativne funkcije. Ovdje se nalaze endpointi koji omogućuju administratorima dodavanje, brisanje ili uređivanje korisnika, dobavljača, vrsta troškova, mjesta troškova te kreiranje izvještaja o ukupnim troškovima po mjestima troška.
+- **invoices.py**: This module manages all functions related to invoices. It includes capabilities for inputting, updating, deleting, and viewing invoices.
 
-- **invoices.py**: Ovaj modul upravlja svim funkcijama vezanim uz ulazne račune. Uključuje mogućnosti za unos, ažuriranje, brisanje i pregled računa.
-
-- **users.py**: Modul koji upravlja korisničkim podacima. Ovdje se nalaze funkcionalnosti za dobivanje informacija o korisnicima, njihovo ažuriranje i upravljanje korisničkim profilima.
-
+- **users.py**: A module that manages user data. It contains functionalities for retrieving information about users, updating their profiles, and managing user accounts.
 
 ---
 
-## Funkcionalnosti
 
-- **Korisnička autentifikacija**: Prijava, registracija, odjava.
-- **Administratorske funkcije**: Dodavanje i brisanje korisnika, dobavljača, vrste troškova, mjesta troškova, generiranje izvještaja.
-- **Upravljanje ulaznim računima**: Unos, ažuriranje i brisanje računa.
-- **Vizualizacija podataka**: Izvještaj o troškovima s grafičkim prikazima i opcijom izvoza u Excel.
+## Database Setup
+
+FastAPI uses SQLAlchemy to manage the database. To set up the database, follow these steps:
+
+1. **Install Required Packages**:
+
+   If you haven't already, add SQLAlchemy and SQLite to your requirements:
+
+   ```bash
+   pip install sqlalchemy databases[sqlite]
 
 ---
 
-## Tehnologije
 
-- **FastAPI** - Web framework za backend
-- **SQLite** - Baza podataka
+## Features
 
+- **User Authentication**: Login, registration, and logout.
+- **Administrative Functions**: Adding and deleting users, suppliers, types of expenses, cost centers, and generating reports.
+- **Invoice Management**: Inputting, updating, and deleting invoices.
+- **Data Visualization**: Expense reports with graphical representations and export options to Excel.
+
+---
+
+## Technologies
+
+- **FastAPI** - Web framework for backend
+- **SQLite** - Database
