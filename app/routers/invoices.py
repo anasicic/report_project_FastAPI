@@ -38,6 +38,7 @@ class InvoiceRequest(BaseModel):
     netto_amount: float = Field(..., description="Net amount must be greater than 0")
     date: str = Field(..., description="Date of the invoice in YYYY-MM-DD format")
     invoice_number: str = Field(..., description="Invoice number must be between 1 and 20 characters long")
+    
 
     
 
@@ -73,6 +74,7 @@ class InvoiceResponse(BaseModel):
     date: str
     invoice_number: str
     user_id: int
+    
     
     class Config:
         
@@ -178,26 +180,31 @@ async def update_invoice(
     db: Session = Depends(get_db),
     user: dict = Depends(get_current_user)  
 ):
-    
     if user is None:
-        raise HTTPException(status_code=401, detail='Authentication Failed')
-
+        raise HTTPException(status_code=401, detail="Authentication Failed")
     
-    invoice_model = db.query(Invoice).filter(Invoice.id == invoice_id, Invoice.user_id == user.id).first()
+    # Provjera da li je korisnik admin
+    if user.role == "admin":
+        # Ako je korisnik admin, može uređivati bilo koji račun
+        invoice_model = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    else:
+        # Ako korisnik nije admin, može uređivati samo vlastite račune
+        invoice_model = db.query(Invoice).filter(Invoice.id == invoice_id, Invoice.user_id == user.id).first()
     
     if invoice_model is None:
-        raise HTTPException(status_code=404, detail='Invoice not found or not authorized to update.')
+        raise HTTPException(status_code=404, detail="Invoice not found or not authorized to update.")
 
-
+    # Ažuriranje podataka računa
     invoice_model.cost_code_id = invoice_request.cost_code_id
     invoice_model.cost_center_id = invoice_request.cost_center_id
     invoice_model.supplier_id = invoice_request.supplier_id
     invoice_model.netto_amount = invoice_request.netto_amount
     invoice_model.date = datetime.strptime(invoice_request.date, "%Y-%m-%d").date()
     invoice_model.invoice_number = invoice_request.invoice_number
-    
-    
+
+    # Spremanje promjena u bazu
     db.commit()
+
 
 
 @router.delete("/{invoice_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -260,7 +267,7 @@ async def get_supplier(
     return supplier
 
 
-@router.get("/cost-center/{cost_center_id}", response_model=CostCenterBase, status_code=status.HTTP_200_OK)
+@router.get("/cost_center/{cost_center_id}", response_model=CostCenterBase, status_code=status.HTTP_200_OK)
 async def get_cost_center(
     cost_center_id: int = Path(..., gt=0),
     db: Session = Depends(get_db),
@@ -274,7 +281,7 @@ async def get_cost_center(
     return cost_center
 
 
-@router.get("/type-of-cost/{type_of_cost_id}", response_model=TypeOfCostBase, status_code=status.HTTP_200_OK)
+@router.get("/type_of_cost/{type_of_cost_id}", response_model=TypeOfCostBase, status_code=status.HTTP_200_OK)
 async def get_type_of_cost(
     type_of_cost_id: int = Path(..., gt=0),
     db: Session = Depends(get_db),
