@@ -1,4 +1,4 @@
-from typing import Annotated, List
+from typing import Annotated, Optional
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException
@@ -7,6 +7,8 @@ from models import User, Supplier, Invoice, TypeOfCost, CostCenter
 from .auth import UserResponse
 from database import SessionLocal
 from .auth import get_current_user
+
+
 from passlib.context import CryptContext
 
 router = APIRouter(
@@ -56,6 +58,15 @@ class CostCenterBase(BaseModel):
     class Config:
         orm_mode = True
 
+class UserUpdateRequest(BaseModel):
+    username: Optional[str] = None
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    password: Optional[str] = Field(None, min_length=6)
+
+
+
 @router.get("/current_user", response_model=UserResponse)
 async def read_me(current_user: UserResponse = Depends(get_current_user)):
     return current_user
@@ -78,4 +89,37 @@ async def change_password(
     db.commit()
 
     return {"detail": "Password updated successfully"}
+
+@router.put("/update_profile", response_model=UserResponse)
+async def update_user_profile(
+    user_update: UserUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Endpoint za ažuriranje profila trenutno prijavljenog korisnika.
+    """
+
+    # Dohvaćamo korisnika iz baze
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Korisnik nije pronađen")
+
+    # Ažuriranje korisničkih podataka samo ako su nova polja poslana
+    if user_update.username:
+        user.username = user_update.username
+    if user_update.email:
+        user.email = user_update.email
+    if user_update.first_name:
+        user.first_name = user_update.first_name
+    if user_update.last_name:
+        user.last_name = user_update.last_name
+    if user_update.password:
+        user.hashed_password = bcrypt_context.hash(user_update.password)
+
+    # Spremamo promjene u bazu podataka
+    db.commit()
+    db.refresh(user)
+
+    return user
 
