@@ -10,7 +10,7 @@ from database import get_db
 from passlib.context import CryptContext
 from .invoices import InvoiceRequest, InvoiceResponse
 from datetime import datetime
-
+from .invoices import SupplierBase, CostCenterBase, TypeOfCostBase 
 
 
 router = APIRouter(
@@ -108,6 +108,7 @@ async def get_user_by_id(user_id: int, db: db_dependency, current_user: UserResp
         role=user.role,
         is_active=user.is_active
     )
+
 
 
 @router.post("/create-user")
@@ -327,6 +328,26 @@ async def delete_type_of_cost(
     return {"detail": "Cost type deleted successfully."}
 
 
+@router.get("/data/type-of-costs", response_model=List[TypeOfCostBase])
+async def get_type_of_costs(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    return db.query(TypeOfCost).all()
+
+
+@router.get("/data/type-of-costs/{type_of_cost_id}", response_model=TypeOfCostBase)
+async def get_type_of_cost_by_id(
+    type_of_cost_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    type_of_cost = db.query(TypeOfCost).filter(TypeOfCost.id == type_of_cost_id).first()
+    if type_of_cost is None:
+        raise HTTPException(status_code=404, detail="Type of cost not found")
+    return type_of_cost
+
+
 @router.post("/cost_center/", response_model=CostCenterCreate, status_code=status.HTTP_201_CREATED)
 async def create_cost_center(
     cost_center: CostCenterCreate, 
@@ -370,6 +391,27 @@ async def delete_cost_center(
     return {"detail": "Cost center deleted successfully."}
 
 
+@router.get("/data/cost-centers/{cost_center_id}", response_model=CostCenterBase)
+async def get_cost_center_by_id(
+    cost_center_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    cost_center = db.query(CostCenter).filter(CostCenter.id == cost_center_id).first()
+    if cost_center is None:
+        raise HTTPException(status_code=404, detail="Cost Center not found")
+    return cost_center
+
+
+@router.get("/data/cost-centers", response_model=List[CostCenterBase])
+async def get_cost_centers(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    return db.query(CostCenter).all()
+
+
+
 @router.post("/supplier/", response_model=SupplierCreate, status_code=status.HTTP_201_CREATED)
 async def create_supplier(
     supplier: SupplierCreate, 
@@ -410,6 +452,27 @@ async def delete_supplier(
         raise HTTPException(status_code=404, detail="Supplier not found")
     
     return {"detail": "Supplier deleted successfully."}
+
+
+@router.get("/data/suppliers", response_model=List[SupplierBase])
+async def read_suppliers(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    suppliers = db.query(Supplier).all()
+    return suppliers
+
+
+@router.get("/data/suppliers/{supplier_id}", response_model=SupplierBase)
+async def read_supplier_by_id(
+    supplier_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+    if supplier is None:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    return supplier
 
 
 
