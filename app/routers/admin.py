@@ -11,6 +11,7 @@ from passlib.context import CryptContext
 from .invoices import InvoiceRequest, InvoiceResponse
 from datetime import datetime
 from .invoices import SupplierBase, CostCenterBase, TypeOfCostBase 
+from sqlalchemy.exc import IntegrityError
 
 
 router = APIRouter(
@@ -72,7 +73,7 @@ async def protected_route(current_user: Annotated[UserResponse, Depends(get_curr
     return {"message": "Welcome, admin!"}
 
 
-@router.get("/users", response_model=List[UserResponse])
+@router.get("/user", response_model=List[UserResponse])
 async def get_all_users(db: db_dependency, current_user: UserResponse = Depends(get_current_user)):
     if current_user.role != 'admin':
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
@@ -88,7 +89,7 @@ async def get_all_users(db: db_dependency, current_user: UserResponse = Depends(
         is_active=user.is_active
     ) for user in users]
 
-@router.get("/users/{user_id}", response_model=UserResponse)
+@router.get("/user/{user_id}", response_model=UserResponse)
 async def get_user_by_id(user_id: int, db: db_dependency, current_user: UserResponse = Depends(get_current_user)):
  
     if current_user.role != 'admin' and current_user.id != user_id:
@@ -152,31 +153,46 @@ async def create_user_for_admin(create_user_request: CreateUserRequest,
 async def update_user(
     user_id: int,
     update_user_request: UpdateUserRequest,
-    db: db_dependency,
-    current_user: UserResponse = Depends(get_current_user)
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user),
 ):
     if current_user.role != 'admin':
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
+    # Dohvaćanje korisnika iz baze
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    
-    if update_user_request.username is not None:
-        user.username = update_user_request.username  
-    if update_user_request.email is not None:
-        user.email = update_user_request.email  
+    # Ažuriranje samo poslanih podataka
+    if update_user_request.username is not None and update_user_request.username != user.username:
+        user.username = update_user_request.username
+
+    if update_user_request.email is not None and update_user_request.email != user.email:
+        # Provjera UNIQUE ograničenja za email
+        existing_user = db.query(User).filter(User.email == update_user_request.email).first()
+        if existing_user and existing_user.id != user_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is already in use")
+        user.email = update_user_request.email
+
     if update_user_request.first_name is not None:
-        user.first_name = update_user_request.first_name  
+        user.first_name = update_user_request.first_name
+
     if update_user_request.last_name is not None:
-        user.last_name = update_user_request.last_name  
+        user.last_name = update_user_request.last_name
+
     if update_user_request.role is not None:
-        user.role = update_user_request.role  
+        user.role = update_user_request.role
 
-    db.commit()
-    db.refresh(user)
+    # Spremanje promjena u bazu
+    try:
+        db.commit()
+        db.refresh(user)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+    # Vraćanje ažuriranog korisnika
     return UserResponse(
         id=user.id,
         username=user.username,
@@ -184,11 +200,12 @@ async def update_user(
         first_name=user.first_name,
         last_name=user.last_name,
         role=user.role,
-        is_active=user.is_active
+        is_active=user.is_active,
     )
 
 
-@router.delete("/users/{user_id}", status_code=204)
+
+@router.delete("/user/{user_id}", status_code=204)
 async def delete_user(
     user_id: int, 
     db: Session = Depends(get_db), 
@@ -305,6 +322,62 @@ async def create_type_of_cost(
     
     return new_type_of_cost
 
+
+@router.put("/update-user/{user_id}", response_model=UserResponse, status_code=status.HTTP_200_OK)
+async def update_user(
+    user_id: int,
+    update_user_request: UpdateUserRequest,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    # Provjeravamo i ažuriramo samo izmijenjene podatke
+    if update_user_request.username and update_user_request.username != user.username:
+        user.username = update_user_request.username
+
+    if update_user_request.email and update_user_request.email != user.email:
+        # Provjeri postoji li korisnik s istim emailom
+        existing_user = db.query(User).filter(User.email == update_user_request.email).first()
+        if existing_user and existing_user.id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email is already in use by another user"
+            )
+        user.email = update_user_request.email
+
+    if update_user_request.first_name and update_user_request.first_name != user.first_name:
+        user.first_name = update_user_request.first_name
+
+    if update_user_request.last_name and update_user_request.last_name != user.last_name:
+        user.last_name = update_user_request.last_name
+
+    if update_user_request.role and update_user_request.role != user.role:
+        user.role = update_user_request.role
+
+    # Sprema promjene u bazu
+    try:
+        db.commit()
+        db.refresh(user)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error updating user")
+
+    return UserResponse(
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        role=user.role,
+        is_active=user.is_active
+    )
+
 @router.delete("/type_of_cost/{cost_type_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_type_of_cost(
     cost_type_id: int,
@@ -328,7 +401,7 @@ async def delete_type_of_cost(
     return {"detail": "Cost type deleted successfully."}
 
 
-@router.get("/data/type-of-costs", response_model=List[TypeOfCostBase])
+@router.get("/data/type-of-cost", response_model=List[TypeOfCostBase])
 async def get_type_of_costs(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_user)
@@ -338,7 +411,7 @@ async def get_type_of_costs(
     return db.query(TypeOfCost).all()
 
 
-@router.get("/data/type-of-costs/{type_of_cost_id}", response_model=TypeOfCostBase)
+@router.get("/data/type-of-cost/{type_of_cost_id}", response_model=TypeOfCostBase)
 async def get_type_of_cost_by_id(
     type_of_cost_id: int,
     db: Session = Depends(get_db),
@@ -373,6 +446,41 @@ async def create_cost_center(
     return new_cost_center
 
 
+@router.put("/cost_center/{cost_center_id}", response_model=CostCenterBase, status_code=status.HTTP_200_OK)
+async def update_cost_center(
+    cost_center_id: int,
+    update_cost_center_request: CostCenterCreate,  
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+
+    if current_user.role != 'admin':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+
+    cost_center = db.query(CostCenter).filter(CostCenter.id == cost_center_id).first()
+    if cost_center is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cost center not found"
+        )
+
+    if update_cost_center_request.cost_center_code is not None:
+        cost_center.cost_center_code = update_cost_center_request.cost_center_code
+    if update_cost_center_request.cost_center_name is not None:
+        cost_center.cost_center_name = update_cost_center_request.cost_center_name
+
+    db.commit()
+    db.refresh(cost_center)
+
+    return CostCenterBase(
+        id=cost_center.id,
+        cost_center_name=cost_center.cost_center_name
+    )
+
+
 @router.delete("/cost_center/{cost_center_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_cost_center(
     cost_center_id: int,
@@ -396,7 +504,7 @@ async def delete_cost_center(
     return {"detail": "Cost center deleted successfully."}
 
 
-@router.get("/data/cost-centers/{cost_center_id}", response_model=CostCenterBase)
+@router.get("/data/cost-center/{cost_center_id}", response_model=CostCenterBase)
 async def get_cost_center_by_id(
     cost_center_id: int,
     db: Session = Depends(get_db),
@@ -411,7 +519,7 @@ async def get_cost_center_by_id(
     return cost_center
 
 
-@router.get("/data/cost-centers", response_model=List[CostCenterBase])
+@router.get("/data/cost-center", response_model=List[CostCenterBase])
 async def get_cost_centers(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_user)
@@ -441,6 +549,37 @@ async def create_supplier(
     
     return new_supplier
 
+@router.put("/supplier/{supplier_id}", response_model=SupplierBase, status_code=status.HTTP_200_OK)
+async def update_supplier(
+    supplier_id: int,
+    update_supplier_request: SupplierCreate, 
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_user)
+):
+    if current_user.role != 'admin':
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+
+    supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+    if supplier is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Supplier not found"
+        )
+
+    if update_supplier_request.supplier_name is not None:
+        supplier.supplier_name = update_supplier_request.supplier_name
+
+    db.commit()
+    db.refresh(supplier)
+
+    return SupplierBase(
+        id=supplier.id,
+        supplier_name=supplier.supplier_name
+    )
+
 
 @router.delete("/supplier/{supplier_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_supplier(
@@ -465,7 +604,7 @@ async def delete_supplier(
     return {"detail": "Supplier deleted successfully."}
 
 
-@router.get("/data/suppliers", response_model=List[SupplierBase])
+@router.get("/data/supplier", response_model=List[SupplierBase])
 async def read_suppliers(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_user)
@@ -477,7 +616,7 @@ async def read_suppliers(
     return suppliers
 
 
-@router.get("/data/suppliers/{supplier_id}", response_model=SupplierBase)
+@router.get("/data/supplier/{supplier_id}", response_model=SupplierBase)
 async def read_supplier_by_id(
     supplier_id: int,
     db: Session = Depends(get_db),
