@@ -333,6 +333,8 @@ async def get_type_of_costs(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_user)
 ):
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     return db.query(TypeOfCost).all()
 
 
@@ -342,6 +344,9 @@ async def get_type_of_cost_by_id(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_user)
 ):
+    
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     type_of_cost = db.query(TypeOfCost).filter(TypeOfCost.id == type_of_cost_id).first()
     if type_of_cost is None:
         raise HTTPException(status_code=404, detail="Type of cost not found")
@@ -397,6 +402,9 @@ async def get_cost_center_by_id(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_user)
 ):
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+    
     cost_center = db.query(CostCenter).filter(CostCenter.id == cost_center_id).first()
     if cost_center is None:
         raise HTTPException(status_code=404, detail="Cost Center not found")
@@ -408,6 +416,9 @@ async def get_cost_centers(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_user)
 ):
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
     return db.query(CostCenter).all()
 
 
@@ -459,6 +470,9 @@ async def read_suppliers(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_user)
 ):
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
     suppliers = db.query(Supplier).all()
     return suppliers
 
@@ -469,6 +483,9 @@ async def read_supplier_by_id(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_user)
 ):
+    if current_user.role != 'admin':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
     supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
     if supplier is None:
         raise HTTPException(status_code=404, detail="Supplier not found")
