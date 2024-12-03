@@ -99,16 +99,9 @@ async def get_user_by_id(user_id: int, db: db_dependency, current_user: UserResp
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    return UserResponse(
-        id=user.id,
-        username=user.username,
-        email=user.email,
-        first_name=user.first_name,
-        last_name=user.last_name,
-        role=user.role,
-        is_active=user.is_active
-    )
+    # Automatic mapping using model_validate
 
+    return UserResponse.model_validate(user)
 
 
 @router.post("/create-user")
@@ -146,8 +139,6 @@ async def create_user_for_admin(create_user_request: CreateUserRequest,
     db.commit()
     db.refresh(new_user)
     return new_user
-
-
 
 
 
@@ -218,16 +209,7 @@ async def update_invoice(
     db.commit()
     db.refresh(invoice_model)
 
-    return InvoiceResponse(
-        id=invoice_model.id,
-        cost_code_id=invoice_model.cost_code_id,
-        cost_center_id=invoice_model.cost_center_id,
-        supplier_id=invoice_model.supplier_id,
-        netto_amount=invoice_model.netto_amount,
-        date=invoice_model.date.isoformat(),
-        invoice_number=invoice_model.invoice_number,
-        user_id=invoice_model.user_id
-    )
+    return InvoiceResponse.model_validate(invoice_model)
 
 
 
@@ -298,16 +280,8 @@ async def update_user(
     db.commit()
     db.refresh(user)
 
-    
-    return UserResponse(
-        id=user.id,
-        username=user.username,
-        email=user.email,
-        first_name=user.first_name,
-        last_name=user.last_name,
-        role=user.role,
-        is_active=user.is_active
-    )
+    return UserResponse.model_validate(user)
+
 
 @router.delete("/type_of_cost/{cost_type_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_type_of_cost(
@@ -406,10 +380,7 @@ async def update_cost_center(
     db.commit()
     db.refresh(cost_center)
 
-    return CostCenterBase(
-        id=cost_center.id,
-        cost_center_name=cost_center.cost_center_name
-    )
+    return CostCenterBase.model_validate(cost_center)
 
 
 @router.delete("/cost_center/{cost_center_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -506,10 +477,7 @@ async def update_supplier(
     db.commit()
     db.refresh(supplier)
 
-    return SupplierBase(
-        id=supplier.id,
-        supplier_name=supplier.supplier_name
-    )
+    return SupplierBase.model_validate(supplier)
 
 
 @router.delete("/supplier/{supplier_id}", status_code=status.HTTP_204_NO_CONTENT)
