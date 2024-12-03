@@ -17,7 +17,6 @@ router = APIRouter(
     tags=['auth']
 )
 
-# Pomoćni model za API request
 class UserActivationRequest(BaseModel):
     is_active: bool
 
@@ -115,7 +114,7 @@ async def get_current_user(token: str = Depends(oauth2_bearer), db: Session = De
 
 @router.post("/create-user", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(create_user_request: CreateUserRequest, db: db_dependency):
-    # Provjeri da li korisnik već postoji
+    # Check if the user already exists
     existing_user = db.query(User).filter(
         (User.username == create_user_request.username) |
         (User.email == create_user_request.email)
@@ -125,10 +124,10 @@ async def create_user(create_user_request: CreateUserRequest, db: db_dependency)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Username or email already registered.")
 
-    # Hashiraj lozinku
+    
     hashed_password = bcrypt_context.hash(create_user_request.password)
     
-    # Kreiraj novog korisnika
+    
     new_user = User(
         username=create_user_request.username,
         email=create_user_request.email,
@@ -136,7 +135,7 @@ async def create_user(create_user_request: CreateUserRequest, db: db_dependency)
         last_name=create_user_request.last_name,
         hashed_password=hashed_password,
         role=create_user_request.role,
-        is_active=True  # Aktiviraj novog korisnika
+        is_active=True  
     )
 
     db.add(new_user)
@@ -150,7 +149,7 @@ async def create_user(create_user_request: CreateUserRequest, db: db_dependency)
 
        
         return {
-            **UserResponse.from_orm(new_user).dict(),  # Vraćamo sve informacije o korisniku
+            **UserResponse.from_orm(new_user).dict(), 
             "access_token": token,
             "token_type": "bearer"
         }
@@ -181,25 +180,24 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
     
     return response
 
-# Endpoint za ažuriranje statusa korisnika (aktivacija/deaktivacija)
 @router.put("/users/{user_id}/activation", status_code=status.HTTP_200_OK)
 async def update_user_activation(
     user_id: int,
     activation_data: UserActivationRequest,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)  # Provjerava autentifikacije
+    current_user: dict = Depends(get_current_user)  
 ):
-    #  Samo admin može upravljati aktivacijom drugih korisnika
+    
     if current_user["role"] != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only admins can activate/deactivate users.")
     
-    # Dohvat korisnika prema ID-u
+   
     user = db.query(User).filter(User.id == user_id).first()
 
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
     
-    # Ažuriranje statusa korisnika
+   
     user.is_active = activation_data.is_active
     db.commit()  
     status_message = "activated" if activation_data.is_active else "deactivated"

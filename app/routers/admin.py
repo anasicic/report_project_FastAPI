@@ -66,7 +66,6 @@ bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 @router.get("/protected-route")
 async def protected_route(current_user: Annotated[UserResponse, Depends(get_current_user)]):
-    # Provjera da li je korisnik admin
     if current_user.role != 'admin':
         raise HTTPException(status_code=403, detail="Access denied")
     
@@ -149,59 +148,6 @@ async def create_user_for_admin(create_user_request: CreateUserRequest,
     return new_user
 
 
-@router.put("/update-user/{user_id}", response_model=UserResponse, status_code=status.HTTP_200_OK)
-async def update_user(
-    user_id: int,
-    update_user_request: UpdateUserRequest,
-    db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(get_current_user),
-):
-    if current_user.role != 'admin':
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
-
-    # Dohvaćanje korisnika iz baze
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
-    # Ažuriranje samo poslanih podataka
-    if update_user_request.username is not None and update_user_request.username != user.username:
-        user.username = update_user_request.username
-
-    if update_user_request.email is not None and update_user_request.email != user.email:
-        # Provjera UNIQUE ograničenja za email
-        existing_user = db.query(User).filter(User.email == update_user_request.email).first()
-        if existing_user and existing_user.id != user_id:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is already in use")
-        user.email = update_user_request.email
-
-    if update_user_request.first_name is not None:
-        user.first_name = update_user_request.first_name
-
-    if update_user_request.last_name is not None:
-        user.last_name = update_user_request.last_name
-
-    if update_user_request.role is not None:
-        user.role = update_user_request.role
-
-    # Spremanje promjena u bazu
-    try:
-        db.commit()
-        db.refresh(user)
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
-    # Vraćanje ažuriranog korisnika
-    return UserResponse(
-        id=user.id,
-        username=user.username,
-        email=user.email,
-        first_name=user.first_name,
-        last_name=user.last_name,
-        role=user.role,
-        is_active=user.is_active,
-    )
 
 
 
@@ -327,47 +273,32 @@ async def create_type_of_cost(
 async def update_user(
     user_id: int,
     update_user_request: UpdateUserRequest,
-    db: Session = Depends(get_db),
+    db: db_dependency,
     current_user: UserResponse = Depends(get_current_user)
 ):
     if current_user.role != 'admin':
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
-
+    
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    # Provjeravamo i ažuriramo samo izmijenjene podatke
-    if update_user_request.username and update_user_request.username != user.username:
+    if update_user_request.username is not None:
         user.username = update_user_request.username
-
-    if update_user_request.email and update_user_request.email != user.email:
-        # Provjeri postoji li korisnik s istim emailom
-        existing_user = db.query(User).filter(User.email == update_user_request.email).first()
-        if existing_user and existing_user.id != user_id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email is already in use by another user"
-            )
-        user.email = update_user_request.email
-
-    if update_user_request.first_name and update_user_request.first_name != user.first_name:
+    if update_user_request.email is not None:
+        user.email = update_user_request.email  
+    if update_user_request.first_name is not None:
         user.first_name = update_user_request.first_name
-
-    if update_user_request.last_name and update_user_request.last_name != user.last_name:
+    if update_user_request.last_name is not None:
         user.last_name = update_user_request.last_name
-
-    if update_user_request.role and update_user_request.role != user.role:
+    if update_user_request.role is not None:
         user.role = update_user_request.role
 
-    # Sprema promjene u bazu
-    try:
-        db.commit()
-        db.refresh(user)
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error updating user")
+    
+    db.commit()
+    db.refresh(user)
 
+    
     return UserResponse(
         id=user.id,
         username=user.username,

@@ -41,7 +41,7 @@ class SupplierBase(BaseModel):
     supplier_name: str
 
     class Config:
-        orm_mode = True   # Enable ORM mode for this model
+        orm_mode = True   
 
 
 class TypeOfCostBase(BaseModel):
@@ -101,12 +101,12 @@ async def update_user_profile(
     Endpoint za ažuriranje profila trenutno prijavljenog korisnika.
     """
 
-    # Dohvaćamo korisnika iz baze
+    # Fetching the user from the database
     user = db.query(User).filter(User.id == current_user.id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Korisnik nije pronađen")
 
-    # Ažuriranje korisničkih podataka samo ako su nova polja poslana
+    # Updating user data only if new fields are provided
     if user_update.username:
         user.username = user_update.username
     if user_update.email:
@@ -118,7 +118,6 @@ async def update_user_profile(
     if user_update.password:
         user.hashed_password = bcrypt_context.hash(user_update.password)
 
-    # Spremamo promjene u bazu podataka
     db.commit()
     db.refresh(user)
 
